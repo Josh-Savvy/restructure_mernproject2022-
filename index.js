@@ -37,7 +37,7 @@ app.use("/api", userRoutes);
 app.use("/api", categoryRoutes);
 app.use("/api", linkRoutes);
 
-app.get("*", (req, res) => {
+app.get("/", (req, res) => {
   res.send("Server is working fine.");
 });
 
