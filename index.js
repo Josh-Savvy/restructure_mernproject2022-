@@ -3,6 +3,7 @@ const morgan = require("morgan");
 const mongoose = require("mongoose");
 const path = require("path");
 const cors = require("cors");
+const favicon = require("serve-favicon");
 require("dotenv").config();
 const app = express();
 
@@ -32,6 +33,8 @@ app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 app.use(cors({ origin: process.env.CLIENT_URL }));
 
 // Middlewares
+app.use(favicon(path.join(__dirname, "/favicon.ico")));
+
 app.use("/api", authRoutes);
 app.use("/api", userRoutes);
 app.use("/api", categoryRoutes);
