@@ -62,7 +62,7 @@ exports.Register = (req, res) => {
     });
 
     const mailMsg = {
-      from: "Shopable Online Store",
+      from: "MERN PROJECT",
       to: `${email}`,
       subject: "Email verification",
       html: `<h1>Email Verification</h1>
@@ -81,7 +81,7 @@ exports.Register = (req, res) => {
       if (!err) {
         console.log("Message Sent!");
         res.json({
-          message: `✔ Dear ${name}, a link has been sent to ${email} successfully, please follow further instrustions
+          message: `✔ Dear ${name}, a link has been sent to <b>${email}</b> successfully, please follow further instrustions
                 to complete your registration.`,
         });
       }

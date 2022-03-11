@@ -29,7 +29,6 @@ exports.update = (req, res) => {
   switch (true) {
     case password && password < 6:
       return res.status(400).json({ error: "Password is too short." });
-       
   }
   User.findOneAndUpdate(
     { _id: req.user._id },
