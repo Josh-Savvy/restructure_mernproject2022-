@@ -37,11 +37,9 @@ app.use("/api", userRoutes);
 app.use("/api", categoryRoutes);
 app.use("/api", linkRoutes);
 
-// app.use(express.static(path.join(__dirname, "build")));
-
-// app.get("*", (req, res) => {
-// res.sendFile(path.join(__dirname, "./build"));
-// });
+app.get("*", (req, res) => {
+  res.send("Server is working fine.");
+});
 
 const PORT = process.env.PORT || 8000;
 
