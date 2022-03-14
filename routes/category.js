@@ -20,6 +20,7 @@ const {
 
 // routes
 // Create new Category
+
 router.post(
   "/category",
   categoryCreateValidator,

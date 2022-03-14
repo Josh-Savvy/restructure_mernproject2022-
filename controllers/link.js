@@ -1,5 +1,9 @@
 const slugify = require("slugify");
+const { newLinkPublishedParams } = require("../helpers/email");
 const Link = require("../models/link");
+const User = require("../models/user");
+const Category = require("../models/category");
+const nodemailer = require('nodemailer');
 
 exports.create = (req, res) => {
   const { title, url, categories, type, medium } = req.body;
@@ -17,6 +21,42 @@ exports.create = (req, res) => {
       });
     }
     res.json(data);
+    // find all users in the category
+    User.find({ categories: { $in: categories } }).exec((err, users) => {
+      if (err) {
+        console.log(
+          "Error occured while sending email to users for new published link"
+        );
+        throw new Error(err);
+      }
+      Category.find({ _id: { $in: categories } }).exec((err, result) => {
+        data.categories = result;
+
+        for (let i = 0; i < users.length; i++) {
+          let transporter = nodemailer.createTransport({
+            service: "gmail",
+            auth: {
+              user: process.env.EMAIL_FROM,
+              pass: process.env.EMAIL_AUTH_PASS,
+            },
+          });
+
+          transporter.sendMail(
+            newLinkPublishedParams(users[i].email, data),
+            (err, result) => {
+              if (err) {
+                console.log(
+                  "Error sending published link alert to users email"
+                );
+                return;
+              }
+              console.log("Email sent successfully.", result);
+              return;
+            }
+          );
+        }
+      });
+    });
   });
 };
 exports.list = (req, res) => {

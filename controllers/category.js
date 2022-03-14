@@ -1,65 +1,53 @@
 const Category = require("../models/category");
 const Link = require("../models/link");
 const slugify = require("slugify");
-const formidable = require("formidable");
-const AWS = require("aws-sdk");
-const uuidv4 = require("uuid/v4");
+const uuid = require("uuid/v4");
 const fs = require("fs");
-const path = require("path");
 
-// s3 config
-// const s3 = new AWS.S3({
-//   accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-//   secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-//   region: process.env.AWS_REGION,
-// });
-
-exports.create = (req, res) => {
-  const { title, content, image } = req.body;
+exports.create = async (req, res) => {
+  const { title, content, image, imageUploadText } = req.body;
 
   const base64Data = new Buffer.from(
     image.replace(/^data:image\/\w+;base64,/, ""),
     "base64"
   );
-  const type = image.split(";")[0].split("/")[1];
+
+  // Slug
   const slug = slugify(title);
 
+  // Image Processing
+  function saveImage(base64Data) {
+    const filename = `${slug}-` + uuid() + imageUploadText;
+    fs.access("./uploads/images", (err) => {
+      if (err) fs.mkdirSync("./uploads/images");
+    });
+    fs.writeFileSync(`uploads/images/${filename}`, base64Data, {
+      encoding: "base64",
+    });
+    return filename;
+  }
+
+  const imageUrl = saveImage(base64Data);
+
   const category = new Category({ title, content, slug });
-  const params = {
-    Bucket: "nextnode.dev",
-    Key: `category/${uuidv4()}.${type}`,
-    Body: base64Data,
-    ACL: "public-read",
-    Content: "base64",
-    ContentType: `image/${type}`,
-  };
-  s3.upload(params, (err, data) => {
-    if (err) {
-      console.log(err);
+
+  category.image.url = `${process.env.API}/category/uploads/image/${imageUrl}`;
+
+  // posted by
+  category.postedBy = req.user._id;
+  // then save to UserDb
+  category.save((error, success) => {
+    if (error) {
+      console.log("Image save to db error: ", error);
       res.status(400).json({
-        error: "File upload to server failed, please try again",
+        error: "Error saving category to Database, please try again",
       });
     }
-    // console.log("AWS UPLOAD DATA RESP: ", data);
-    category.image.url = data.Location;
-    category.image.key = data.Key;
-    // posted by
-
-    category.postedBy = req.user._id;
-    // then save to UserDb
-    category.save((error, success) => {
-      if (error) {
-        console.log("Image save to db error: ", error);
-        res.status(400).json({
-          error: "Error saving category to Database, please try again",
-        });
-      }
-      return res.json(success);
-    });
+    return res.json(success);
   });
 };
 
-exports.list = (req, res) => {
+exports.list = async (req, res) => {
   Category.find({}).exec((err, data) => {
     if (err) {
       return res.status(400).json({
@@ -70,7 +58,7 @@ exports.list = (req, res) => {
   });
 };
 
-exports.read = (req, res) => {
+exports.read = async (req, res) => {
   const { slug } = req.params;
   let limit = req.body.limit ? parseInt(req.body.limit) : 10;
   let skip = req.body.skip ? parseInt(req.body.skip) : 0;
@@ -100,90 +88,83 @@ exports.read = (req, res) => {
     });
 };
 
-exports.update = (req, res) => {
+exports.update = async (req, res) => {
   const { slug } = req.params;
-  const { title, image, content } = req.body;
+  const { title, image, content, imagePreview, imageUploadText } = req.body;
   const base64Data = new Buffer.from(
     image.replace(/^data:image\/\w+;base64,/, ""),
     "base64"
   );
-  const type = image.split(";")[0].split("/")[1];
 
-  Category.findOneAndUpdate({ slug }, { title, content }, { new: true }).exec(
-    (err, updated) => {
+  // if admin wants to update image, remove existing image uploading new one
+  // Remove exisiting image
+  if (imagePreview) {
+    Category.findOne({ slug }).exec((err, category) => {
       if (err) {
         return res.status(400).json({
-          error: "Unable to update category",
+          error: "Temporarily unable to load category",
         });
       }
-      console.log("Updated category", updated);
-      // if admin wants to update image, remove existing image for s3 before uploading new one
-      if (image) {
-        const deleteParams = {
-          Bucket: "nextnode.dev",
-          Key: `${updated.image.key}`,
-        };
-        s3.deleteObject(deleteParams, (err, data) => {
-          if (err) {
-            console.log("image update failed", err);
-          } else {
-            console.log("Image update success", data);
-          }
-        });
 
-        // Update and Upload new image
-        const params = {
-          Bucket: "nextnode.dev",
-          Key: `category/${uuidv4()}.${type}`,
-          Body: base64Data,
-          ACL: "public-read",
-          Content: "base64",
-          ContentType: `image/${type}`,
-        };
-        s3.upload(params, (err, data) => {
-          if (err) {
-            console.log(err);
-            res.status(400).json({
-              error: "File upload to server failed, please try again",
+      const imagePath = `./uploads/images/${
+        category.image.url.split("/", 20)[7]
+      }`;
+      fs.readFile(`./uploads/images/${imagePath}`, (err, data) => {
+        if (err) {
+          // Image Processing
+          function saveImage(base64Data) {
+            const filename = `${slug}-` + uuid() + imageUploadText;
+            fs.access("./uploads/images", (err) => {
+              if (err) fs.mkdirSync("./uploads/images");
             });
+            fs.writeFileSync(`uploads/images/${filename}`, base64Data, {
+              encoding: "base64",
+            });
+            return filename;
           }
-          console.log("AWS UPLOAD DATA RESP: ", data);
-          updated.image.url = data.Location;
-          updated.image.key = data.Key;
+          const imageUrl = saveImage(base64Data);
 
-          // then save to UserDb
-          updated.save((error, success) => {
-            if (error) {
-              console.log("Image save to db error: ", error);
-              res
-                .status(400)
-                .json({ error: "Error saving category to Database" });
+          Category.findOneAndUpdate(
+            { slug },
+            {
+              title,
+              content,
+              image: {
+                url: `${process.env.API}/api/category/uploads/image/${imageUrl}`,
+                key: `category/uploads/image/${imageUrl}`,
+              },
+            },
+            { new: true }
+          ).exec((err, updated) => {
+            if (err) {
+              return res.status(400).json({
+                error: "Unable to update category",
+              });
             }
-            res.json(success);
+            console.log(`Category -${slug}- updated successfully`);
+            return res.status(200).json(updated);
           });
-        });
-      } else {
-        res.json(updated);
-      }
-    }
-  );
+        }
+        if (data) {
+          fs.unlink(imagePath, function (err) {
+            if (err) {
+              console.log(`${slug} - Image could not be deleted`);
+              throw err;
+            }
+            console.log(`${slug} - Image deleted!`);
+          });
+        }
+      });
+    });
+  }
 };
-exports.remove = (req, res) => {
+exports.remove = async (req, res) => {
   const { slug } = req.params;
   Category.findOneAndRemove({ slug }).exec((err, data) => {
     if (err) {
       console.log("Couldn't delete category ", err);
       res.status(400).json({ error: "Error deleting category" });
     }
-    // remove the existing image from s3 before uploading new/updated one
-    const deleteParams = {
-      Bucket: "nextnode.dev",
-      Key: `${data.image.key}`,
-    };
-    s3.deleteObject(deleteParams, (err, data) => {
-      if (err) console.log("image delete failed", err);
-      else console.log("Image delete success", data);
-    });
 
     res.json({
       message: "Category deleted successfully",
@@ -191,7 +172,7 @@ exports.remove = (req, res) => {
   });
 };
 
-exports.clickCount = (req, res) => {
+exports.clickCount = async (req, res) => {
   const { linkId } = req.body;
   Link.findByIdAndUpdate(
     linkId,
@@ -205,4 +186,3 @@ exports.clickCount = (req, res) => {
     res.json(result);
   });
 };
-

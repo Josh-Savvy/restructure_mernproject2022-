@@ -81,8 +81,7 @@ exports.Register = (req, res) => {
       if (!err) {
         console.log("Message Sent!");
         res.json({
-          message: `✔ Dear ${name}, a link has been sent to ${email} successfully, please follow further instrustions
-                to complete your registration.`,
+          message: `✔ Dear ${name}, a link has been sent to ${email} with instructions to activate your account.`,
         });
       }
     });
