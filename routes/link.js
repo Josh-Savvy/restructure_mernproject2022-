@@ -15,7 +15,16 @@ const {
   canUpdateDeleteLink,
 } = require("../controllers/auth");
 
-const { create, update, list, read, remove } = require("../controllers/link");
+const {
+  create,
+  update,
+  list,
+  read,
+  remove,
+  trending,
+  trendingInCategory,
+  clickCount,
+} = require("../controllers/link");
 
 // routes
 router.post(
@@ -29,6 +38,12 @@ router.post(
 router.post("/links", requireSignin, adminMiddleware, list);
 
 router.get("/link", list);
+
+router.put("/click-count", clickCount);
+
+router.get("/links/trending", trending);
+
+router.get("/links/trending/:slug", trendingInCategory);
 
 router.get("/link/:id", read);
 router.put(

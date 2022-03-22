@@ -3,7 +3,7 @@ const { newLinkPublishedParams } = require("../helpers/email");
 const Link = require("../models/link");
 const User = require("../models/user");
 const Category = require("../models/category");
-const nodemailer = require('nodemailer');
+const nodemailer = require("nodemailer");
 
 exports.create = (req, res) => {
   const { title, url, categories, type, medium } = req.body;
@@ -117,5 +117,45 @@ exports.remove = (req, res) => {
       });
     }
     res.json({ message: "Link deleted successfully" });
+  });
+};
+
+exports.clickCount = async (req, res) => {
+  const { linkId } = req.body;
+  Link.findByIdAndUpdate(
+    linkId,
+    { $inc: { clicks: 1 } },
+    { upsert: true, new: true }
+  ).exec((err, result) => {
+    if (err)
+      return res.status(400).json({
+        error: "Could not update views count",
+      });
+    res.json(result);
+  });
+};
+
+exports.trending = (req, res) => {
+  Link.find()
+    .populate("postedBy", "name")
+    .sort({ clicks: -1 })
+    .limit(4)
+    .exec((err, links) => {
+      if (err) return res.status(400).json({ error: "No links found" });
+      res.json(links);
+    });
+};
+
+exports.trendingInCategory = (req, res) => {
+  const { slug } = req.params;
+  Category.findOne({ slug }, (err, category) => {
+    if (err) return res.status(400).json({ error: "Couldn't load categories" });
+    Link.find({ categories: category })
+      .sort({ clicks: -1 })
+      .limit(4)
+      .exec((err, links) => {
+        if (err) return res.status(400).json({ error: "No links found" });
+        res.json(links);
+      });
   });
 };

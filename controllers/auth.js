@@ -1,6 +1,5 @@
 const User = require("../models/user");
 const nodemailer = require("nodemailer");
-const AWS = require("aws-sdk");
 const jwt = require("jsonwebtoken");
 const {
   registerEmailParams,
@@ -9,15 +8,6 @@ const {
 const shortid = require("shortid");
 const expressJwt = require("express-jwt");
 const _ = require("lodash");
-
-AWS.config.update({
-  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-  region: process.env.AWS_REGION,
-});
-const Link = require("../models/link");
-
-const ses = new AWS.SES({ apiVersion: "2010-12-01" });
 
 exports.Register = (req, res) => {
   // console.log('REGISTER CONTROLLER', req.body);
@@ -40,18 +30,6 @@ exports.Register = (req, res) => {
         expiresIn: "20m",
       }
     );
-
-    // const params = registerEmailParams(email, token);
-    // const sendEmailOnRegister = ses.sendEmail(params).promise();
-    // sendEmailOnRegister
-    //   .then((data) => {
-    //     console.log("email submitted to SES", data);
-    //
-    //   })
-    //   .catch((error) => {
-    //     console.log("ses email on register", error);
-
-    //   });
 
     let transporter = nodemailer.createTransport({
       service: "gmail",

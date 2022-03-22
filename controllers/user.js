@@ -25,22 +25,19 @@ exports.read = (req, res) => {
 };
 
 exports.update = (req, res) => {
-  const { name, password, categories } = req.body;
-  switch (true) {
-    case password && password < 6:
-      return res.status(400).json({ error: "Password is too short." });
-  }
+  const { name, categories } = req.body;
   User.findOneAndUpdate(
     { _id: req.user._id },
-    { name, categories, password },
+    { name, categories },
     { new: true }
-  ).exec((updated, err) => {
+  ).exec((err, updated) => {
     if (err) {
+      console.log(err);
       return res.status(400).json({ error: "No user found" });
     }
     updated.hashed_password = undefined;
     updated.salt = undefined;
 
-    res.json(updated);
+    return res.json({ message: "Profile updated successfully.", updated });
   });
 };

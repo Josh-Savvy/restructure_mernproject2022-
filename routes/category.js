@@ -15,7 +15,6 @@ const {
   list,
   read,
   remove,
-  clickCount,
 } = require("../controllers/category");
 
 // routes
@@ -33,8 +32,7 @@ router.post(
 router.get("/categories", list);
 // List only one category
 router.post("/category/:slug", read);
-// Number of views
-router.put("/click-count", clickCount);
+
 // Update only one category
 router.put(
   "/category/:slug",
