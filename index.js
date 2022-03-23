@@ -31,8 +31,8 @@ const imageRoute = require("./routes/image");
 app.use(morgan("dev"));
 app.use(express.json({ limit: "5mb", type: "application/json" }));
 app.use(express.urlencoded({ extended: true, limit: "5mb" }));
-app.use(cors({ origin: process.env.CLIENT_URL }));
-
+app.use(cors({ origin: '*' }));
+// process.env.CLIENT_URL
 // Middlewares
 app.use(favicon(path.join(__dirname, "/favicon.ico")));
 
